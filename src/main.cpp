@@ -10,6 +10,8 @@
 extern float Altitude2; // Inicializa la altitud
 extern float Voltage;  // Ejemplo de voltaje (aquí lo asignas según el sensor)
 extern Filter Thrust_filtered;  // Filtro de Thrust
+extern volatile float Roll_angle_reference;
+extern volatile float Pitch_angle_reference;
 
 // Tarea 1: Despegue hasta 15 cm
 TaskHandle_t TaskManagerHandle;
@@ -29,10 +31,8 @@ float max (volatile float& a, float b) {
 int etapa = 0;
 
 void TaskTakeoff(void *pvParameters) {
-
-
     while(1) {
-        if(0){
+        if(0) {
             Thrust_command += 0.1f; // Aumentar el Thrust de forma gradual
             Thrust_command = min(Thrust_command, get_trim_duty(Voltage));  // Limitar el Thrust máximo según el voltaje
             Thrust_command = Thrust_filtered.update(Thrust_command, Interval_time);
@@ -92,28 +92,27 @@ void TaskManager(void *pvParameters) {
     while (1)
     {
 
-        if(etapa <= SEC_TO_ETAPA(1)) {
-             Mode = FLIGHT_MODE;
-             Thrust_command += 0.5f; // Aumentar el Thrust de forma gradual
-             Thrust_command = min(Thrust_command, get_trim_duty(Voltage));  // Limitar el Thrust máximo según el voltaje
-             Thrust_command = Thrust_filtered.update(Thrust_command, Interval_time);
-             USBSerial.println("Rise");
+        if(etapa <= SEC_TO_ETAPA(2)) {
+            Mode = FLIGHT_MODE;
+            Thrust_command += 0.6f; // Aumentar el Thrust de forma gradual
+            Thrust_command = min(Thrust_command, 1.0f);
+            Thrust_command = min(Thrust_command, get_trim_duty(Voltage));  // Limitar el Thrust máximo según el voltaje
+            Thrust_command = Thrust_filtered.update(Thrust_command, Interval_time);
+            USBSerial.println("Rise");
             USBSerial.println(Thrust_command);
-
-         }
-         else if(etapa <= SEC_TO_ETAPA(9)){
-             Mode = FLIGHT_MODE;
-             Mode = FLIGHT_MODE;
-             Thrust_command = Thrust_filtered.update(Thrust_command, Interval_time);
+        }
+        else if(etapa <= SEC_TO_ETAPA(5)){
+            Mode = FLIGHT_MODE;
+            Thrust_command = Thrust_filtered.update(Thrust_command, Interval_time);
             USBSerial.println("Stabilize");
             USBSerial.println(Thrust_command);
         }
-         else if(etapa <= SEC_TO_ETAPA(15)) {
-             Mode = AUTO_LANDING_MODE;
+        else if(etapa <= SEC_TO_ETAPA(8)) {
+            Mode = AUTO_LANDING_MODE;
             USBSerial.println("Stope");
             USBSerial.println(Thrust_command);
-         }
-         else {
+        }
+        else {
             Mode = PARKING_MODE;
             motor_stop();
         }
@@ -134,6 +133,7 @@ void Taskloop400(void *pvParameters) {
 }
 
 void setup() {
+    delay(100);
     init_copter();
     delay(100);
 
